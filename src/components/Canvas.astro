@@ -1,0 +1,100 @@
+---
+
+---
+
+<div
+  id="cursor-layer"
+  class="fixed top-0 left-0 w-full h-full pointer-events-none"
+>
+</div>
+
+<script>
+  import { io } from "socket.io-client";
+
+  const socket = io("http://localhost:3000");
+  window.socket = socket;
+  window.dispatchEvent(new Event("socket-ready"));
+
+  const layer = document.getElementById("cursor-layer");
+
+  const cursors = {};
+
+  window.addEventListener("userConnected", (e) => {
+    const nombre = e.detail;
+    // socket.emit("connected", nombre);
+    socket.emit("join", {
+      role: "client",
+      nombre: nombre,
+    });
+  });
+
+  let lastSend = 0;
+
+  document.addEventListener("mousemove", (e) => {
+    const now = Date.now();
+    if (now - lastSend < 50) return;
+
+    lastSend = now;
+    //console.log("Enviando posición del cursor:", e.clientX, e.clientY);
+
+    socket.emit("cursor:move", {
+      x: e.clientX / window.innerWidth,
+      y: e.clientY / window.innerHeight,
+    });
+  });
+
+  socket.emit("join", {
+    role: "client",
+    nombre: "cliente-" + Math.floor(Math.random() * 1000),
+  });
+
+  // mover cursor
+  socket.on("cursor:move", ({ id, x, y }) => {
+    const cursor = cursors[id];
+    if (!cursor) return;
+
+    cursor.style.transform = `translate(${x * window.innerWidth}px, ${y * window.innerHeight}px)`;
+  });
+
+  socket.on("user:connected", ({ id, nombre, color }) => {
+    createCursor(id, nombre, color);
+  });
+
+  socket.on("users:init", (users) => {
+    console.log("INIT", users);
+
+    Object.entries(users).forEach(([id, user]) => {
+      createCursor(id, user.nombre, user.color);
+    });
+  });
+
+  socket.on("user:remove", (id) => {
+    const cursor = cursors[id];
+    if (cursor) {
+      cursor.remove();
+      delete cursors[id];
+    }
+  });
+
+  function createCursor(id, nombre, color) {
+    if (cursors[id]) return;
+
+    const el = document.createElement("div");
+    el.className = "absolute transition-transform duration-75";
+
+    const dot = document.createElement("div");
+    dot.className = "w-2.5 h-2.5 rounded-full";
+    dot.style.backgroundColor = color;
+
+    const label = document.createElement("span");
+    label.className = "text-xs";
+    label.textContent = nombre;
+    label.style.color = color;
+
+    el.appendChild(dot);
+    el.appendChild(label);
+
+    layer.appendChild(el);
+    cursors[id] = el;
+  }
+</script>
