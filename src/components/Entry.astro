@@ -1,0 +1,123 @@
+---
+
+---
+
+<div
+  id="entry-screen"
+  class="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 p-6"
+>
+  <div
+    class="w-full max-w-2xl rounded-[2rem] border border-slate-700 bg-slate-900/95 p-8 shadow-2xl shadow-slate-950/30 backdrop-blur-xl"
+  >
+    <div class="mb-8 space-y-3 text-center">
+      <p class="text-sm uppercase tracking-[0.3em] text-cyan-300">Bienvenido</p>
+      <h1 class="text-4xl font-semibold text-white">Elige tu avatar</h1>
+      <p class="mx-auto max-w-xl text-sm text-slate-400">
+        Completa tu nombre, selecciona un color y una forma para unirte como
+        cliente.
+      </p>
+    </div>
+
+    <form id="entry-form" class="space-y-6">
+      <label class="block">
+        <span class="text-sm font-medium text-slate-300">Nombre</span>
+        <input
+          id="player-name"
+          type="text"
+          placeholder="Tu nombre"
+          required
+          class="mt-2 w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+        />
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-medium text-slate-300">Color</span>
+        <input
+          id="player-color"
+          type="color"
+          value="#22d3ee"
+          required
+          class="mt-2 h-12 w-full cursor-pointer rounded-3xl border border-slate-700 bg-slate-950 p-2"
+        />
+      </label>
+
+      <fieldset
+        class="grid gap-3 rounded-3xl border border-slate-700 bg-slate-950/90 p-4"
+      >
+        <legend class="px-1 text-sm font-medium text-slate-300">Forma</legend>
+        <div class="grid grid-cols-3 gap-3">
+          <label
+            class="flex cursor-pointer items-center justify-center rounded-3xl border border-slate-700 bg-slate-800 px-3 py-4 text-center transition hover:border-cyan-400"
+          >
+            <input
+              name="shape"
+              type="radio"
+              value="circle"
+              checked
+              class="sr-only"
+            />
+            <span class="text-sm text-slate-200">Círculo</span>
+          </label>
+          <label
+            class="flex cursor-pointer items-center justify-center rounded-3xl border border-slate-700 bg-slate-800 px-3 py-4 text-center transition hover:border-cyan-400"
+          >
+            <input name="shape" type="radio" value="triangle" class="sr-only" />
+            <span class="text-sm text-slate-200">Triángulo</span>
+          </label>
+          <label
+            class="flex cursor-pointer items-center justify-center rounded-3xl border border-slate-700 bg-slate-800 px-3 py-4 text-center transition hover:border-cyan-400"
+          >
+            <input
+              name="shape"
+              type="radio"
+              value="rectangle"
+              class="sr-only"
+            />
+            <span class="text-sm text-slate-200">Rectángulo</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <button
+        type="submit"
+        class="w-full rounded-full bg-cyan-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+      >
+        Entrar
+      </button>
+    </form>
+
+    <p class="mt-6 text-center text-xs text-slate-500">
+      Tu información se envía al servidor de cursors cuando presionas Unirse.
+    </p>
+  </div>
+</div>
+
+<script type="module">
+  const form = document.getElementById("entry-form");
+  const screen = document.getElementById("entry-screen");
+  const nameInput = document.getElementById("player-name");
+  const colorInput = document.getElementById("player-color");
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const nombre = nameInput.value.trim() || "Jugador";
+    const color = colorInput.value || "#22d3ee";
+    const shape =
+      document.querySelector('input[name="shape"]:checked')?.value || "circle";
+
+    const payload = {
+      role: "client",
+      nombre,
+      color,
+      forma: shape,
+    };
+    console.log("Enviando datos de usuario:", payload);
+
+    window.dispatchEvent(new CustomEvent("userConnected", { detail: payload }));
+    screen.classList.add("pointer-events-none", "opacity-0");
+    setTimeout(() => {
+      screen.style.display = "none";
+    }, 200);
+  });
+</script>

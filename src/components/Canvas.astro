@@ -11,20 +11,21 @@
 <script>
   import { io } from "socket.io-client";
 
-  const socket = io("http://localhost:3000");
-  window.socket = socket;
-  window.dispatchEvent(new Event("socket-ready"));
-
+  let socket;
   const layer = document.getElementById("cursor-layer");
 
   const cursors = {};
 
   window.addEventListener("userConnected", (e) => {
-    const nombre = e.detail;
+    // const nombre = e.detail;
     // socket.emit("connected", nombre);
+    const { nombre, color, shape, role } = e.detail;
+    const socket = createSocket();
     socket.emit("join", {
       role: "client",
       nombre: nombre,
+      color: color,
+      shape: shape,
     });
   });
 
@@ -37,57 +38,35 @@
     lastSend = now;
     //console.log("Enviando posición del cursor:", e.clientX, e.clientY);
 
+    if (!socket || !socket.connected) return;
+
     socket.emit("cursor:move", {
       x: e.clientX / window.innerWidth,
       y: e.clientY / window.innerHeight,
     });
   });
 
-  socket.emit("join", {
-    role: "client",
-    nombre: "cliente-" + Math.floor(Math.random() * 1000),
-  });
-
-  // mover cursor
-  socket.on("cursor:move", ({ id, x, y }) => {
-    const cursor = cursors[id];
-    if (!cursor) return;
-
-    cursor.style.transform = `translate(${x * window.innerWidth}px, ${y * window.innerHeight}px)`;
-  });
-
-  socket.on("user:connected", ({ id, nombre, color }) => {
-    createCursor(id, nombre, color);
-  });
-
-  socket.on("users:init", (users) => {
-    console.log("INIT", users);
-
-    Object.entries(users).forEach(([id, user]) => {
-      createCursor(id, user.nombre, user.color);
-    });
-  });
-
-  socket.on("user:remove", (id) => {
-    const cursor = cursors[id];
-    if (cursor) {
-      cursor.remove();
-      delete cursors[id];
-    }
-  });
-
-  function createCursor(id, nombre, color) {
+  function createCursor(id, nombre, color, shape = "circle") {
     if (cursors[id]) return;
 
     const el = document.createElement("div");
-    el.className = "absolute transition-transform duration-75";
+    el.className =
+      "absolute transition-transform duration-75 flex items-center gap-2";
 
     const dot = document.createElement("div");
-    dot.className = "w-2.5 h-2.5 rounded-full";
     dot.style.backgroundColor = color;
 
+    if (shape === "triangle") {
+      dot.className = "w-4 h-4 rotate-45";
+      dot.style.clipPath = "polygon(50% 0%, 0% 100%, 100% 100%)";
+    } else if (shape === "rectangle") {
+      dot.className = "w-4 h-2 rounded-sm";
+    } else {
+      dot.className = "w-3 h-3 rounded-full";
+    }
+
     const label = document.createElement("span");
-    label.className = "text-xs";
+    label.className = "text-xs font-medium";
     label.textContent = nombre;
     label.style.color = color;
 
@@ -96,5 +75,46 @@
 
     layer.appendChild(el);
     cursors[id] = el;
+  }
+
+  function createSocket() {
+    if (socket) return socket;
+
+    socket = io("http://localhost:3000");
+    window.socket = socket;
+    window.dispatchEvent(new CustomEvent("socketReady", { detail: socket }));
+
+    socket.on("connect", () => {
+      console.log("Conectado al servidor con ID:", socket.id);
+    });
+
+    socket.on("cursor:move", ({ id, x, y }) => {
+      const cursor = cursors[id];
+      if (!cursor) return;
+
+      cursor.style.transform = `translate(${x * window.innerWidth}px, ${y * window.innerHeight}px)`;
+    });
+
+    socket.on("user:connected", ({ id, nombre, color, shape }) => {
+      createCursor(id, nombre, color, shape);
+    });
+
+    socket.on("users:init", (users) => {
+      console.log("INIT", users);
+
+      Object.entries(users).forEach(([id, user]) => {
+        createCursor(id, user.nombre, user.color, user.shape);
+      });
+    });
+
+    socket.on("user:remove", (id) => {
+      const cursor = cursors[id];
+      if (cursor) {
+        cursor.remove();
+        delete cursors[id];
+      }
+    });
+
+    return socket;
   }
 </script>
